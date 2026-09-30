@@ -1,0 +1,33 @@
+{
+  "name": "tuitionpro-pro-backend",
+  "version": "2.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "seed": "node src/seed.js",
+    "demo:http": "node src/node-demos/http-server.js",
+    "demo:event-loop": "node src/node-demos/event-loop.js",
+    "demo:fs": "node src/node-demos/fs-demo.js",
+    "demo:buffer": "node src/node-demos/buffer-demo.js",
+    "demo:streams": "node src/node-demos/streams-demo.js",
+    "link-student": "node src/link-student.js"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "express-rate-limit": "^8.2.1",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.8.4",
+    "multer": "^2.4.0",
+    "nodemailer": "^7.0.3",
+    "razorpay": "^2.9.6"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7"
+  }
+}

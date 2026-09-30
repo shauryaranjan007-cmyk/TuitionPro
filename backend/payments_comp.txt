@@ -1,0 +1,138 @@
+function Payments(){
+ const u=user();
+ const [students,setStudents]=useState<any[]>([]);
+ const [rows,setRows]=useState<any[]>([]);
+ const [studentId,setStudentId]=useState("");
+ const [amount,setAmount]=useState(5000);
+ const [month,setMonth]=useState("October 2026");
+ const [summary,setSummary]=useState<any>({});
+ const [filter,setFilter]=useState("All");
+ const [loading,setLoading]=useState(false);
+ const [msg,setMsg]=useState("");
+ const [msgType,setMsgType]=useState("success");
+
+ const load=()=>Promise.all([
+   api.get("/students"),
+   api.get("/payments"),
+   api.get("/payments/summary")
+ ]).then(([s,p,sum])=>{
+   setStudents(s.data);
+   setRows(p.data);
+   setSummary(sum.data);
+ });
+
+ useEffect(()=>{load();},[]);
+
+ const filtered=filter==="All"?rows:rows.filter((r:any)=>r.status===filter);
+
+ const doRecord=async(sid:string,amt:number,mon:string)=>{
+   if(!sid){setMsg("Please select a student.");setMsgType("danger");return;}
+   setLoading(true);setMsg("");
+   try{
+     const o=await api.post("/payments/order",{studentId:sid,amount:amt,month:mon});
+     await api.post("/payments/record",{student:sid,amount:amt,month:mon,status:"Paid",method:o.data?.mode==="demo"?"Demo":"Razorpay",transactionId:o.data?.id});
+     setMsg(o.data?.mode==="demo"?"✅ Demo payment recorded! Add Razorpay keys for live checkout.":"✅ Razorpay order created.");
+     setMsgType("success");
+     load();
+   }catch(e:any){
+     setMsg("❌ "+(e.response?.data?.message||"Payment failed. Please try again."));
+     setMsgType("danger");
+   }
+   setLoading(false);
+ };
+
+ const statusBadge=(s:string)=>{
+   if(s==="Paid") return <span className="badge bg-success">✓ Paid</span>;
+   if(s==="Pending") return <span className="badge bg-warning text-dark">⏳ Pending</span>;
+   return <span className="badge bg-secondary">{s}</span>;
+ };
+
+ return <>
+  <div className="d-flex justify-content-between align-items-start mb-4">
+   <div>
+    <h2 className="fw-bold mb-1">💳 Payments & Fees</h2>
+    <p className="text-muted mb-0">Multi-state payment ledger + optional Razorpay integration.</p>
+   </div>
+   
+  </div>
+
+  {msg&&<div className={`alert alert-${msgType} alert-dismissible`} role="alert">
+   {msg}
+   <button type="button" className="btn-close" onClick={()=>setMsg("")}/>
+  </div>}
+
+  <div className="row g-3 mb-4">
+   {[
+    ["💰 Collected","₹"+(summary.paid||0).toLocaleString("en-IN"),"border-success"],
+    ["⏳ Pending","₹"+(summary.pending||0).toLocaleString("en-IN"),"border-warning"],
+    ["🧾 Transactions",summary.count||0,"border-primary"]
+   ].map(x=><div className="col-md-4" key={String(x[0])}>
+    <motion.div whileHover={{y:-3}} className={`card p-4 border-2 ${x[2]}`}>
+     <div className="small-muted">{x[0]}</div>
+     <div className="stat">{x[1]}</div>
+    </motion.div>
+   </div>)}
+  </div>
+
+  {u?.role==="admin"&&<div className="card p-4 mb-4">
+   <h5 className="fw-semibold mb-3">📝 Record Tuition Payment</h5>
+   <div className="row g-2 align-items-end">
+    <div className="col-md-4">
+     <label className="form-label small fw-semibold">Student</label>
+     <select className="form-select" value={studentId} onChange={e=>setStudentId(e.target.value)}>
+      <option value="">Choose student…</option>
+      {students.map((s:any)=><option key={s._id} value={s._id}>{s.name} — {s.studentCode}</option>)}
+     </select>
+    </div>
+    <div className="col-md-2">
+     <label className="form-label small fw-semibold">Amount (₹)</label>
+     <input className="form-control" type="number" min={0} value={amount} onChange={e=>setAmount(Number(e.target.value))}/>
+    </div>
+    <div className="col-md-3">
+     <label className="form-label small fw-semibold">Month</label>
+     <input className="form-control" value={month} onChange={e=>setMonth(e.target.value)} placeholder="e.g. October 2026"/>
+    </div>
+    <div className="col-md-3">
+     <button className="btn btn-success w-100" onClick={()=>doRecord(studentId,amount,month)} disabled={loading}>
+      {loading?<><span className="spinner-border spinner-border-sm me-2"/>Processing…</>:"💳 Record Payment"}
+     </button>
+    </div>
+   </div>
+  </div>}
+
+  <div className="card p-3">
+   <div className="d-flex justify-content-between align-items-center mb-3">
+    <h5 className="fw-semibold mb-0">Transaction History</h5>
+    <div className="btn-group btn-group-sm">
+     {["All","Paid","Pending"].map(f=>(
+      <button key={f} className={`btn ${filter===f?"btn-primary":"btn-outline-primary"}`} onClick={()=>setFilter(f)}>{f}</button>
+     ))}
+    </div>
+   </div>
+   <div className="table-responsive">
+    <table className="table align-middle">
+     <thead className="table-light">
+      <tr><th>Student</th><th>Month</th><th>Amount</th><th>Status</th><th>Method</th><th>Receipt</th>{u?.role==="admin"&&<th>Action</th>}</tr>
+     </thead>
+     <tbody>
+      {filtered.length===0&&<tr><td colSpan={u?.role==="admin"?7:6} className="text-center text-muted py-4">No {filter!=="All"?filter.toLowerCase():""} transactions found.</td></tr>}
+      {filtered.map((p:any)=><tr key={p._id}>
+       <td className="fw-semibold">{p.student?.name||"—"}</td>
+       <td>{p.month}</td>
+       <td>₹{(p.amount||0).toLocaleString("en-IN")}</td>
+       <td>{statusBadge(p.status)}</td>
+       <td><span className="text-muted small">{p.method||"—"}</span></td>
+       <td><span className="font-monospace small text-muted">{p.receiptNo}</span></td>
+       {u?.role==="admin"&&<td>
+        {p.status==="Pending"&&<button className="btn btn-sm btn-outline-success" disabled={loading} onClick={()=>doRecord(p.student?._id,p.amount,p.month)}>
+         {loading?"…":"Pay Now"}
+        </button>}
+       </td>}
+      </tr>)}
+     </tbody>
+    </table>
+   </div>
+  </div>
+ </>;
+}
+

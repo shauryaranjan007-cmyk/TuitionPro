@@ -1,0 +1,18 @@
+:root{font-family:Inter,system-ui,-apple-system,sans-serif}
+body{margin:0;background:#f4f7fb;color:#162235}
+.navbar{backdrop-filter:blur(12px)}
+.brand{font-weight:900;letter-spacing:-.5px}
+.hero{background:linear-gradient(135deg,#092f4f,#087f72);color:#fff;border-radius:24px;overflow:hidden;position:relative}
+.hero:after{content:"";position:absolute;width:280px;height:280px;border-radius:50%;background:rgba(255,255,255,.08);right:-90px;top:-100px}
+.card{border:0;border-radius:18px;box-shadow:0 8px 28px rgba(25,45,70,.07)}
+.stat{font-size:2rem;font-weight:900}
+.small-muted{font-size:.82rem;color:#718096}
+.sidebar-link{border-radius:10px}
+.sidebar-link.active{background:#e8f3f3;font-weight:700}
+.table thead th{font-size:.8rem;text-transform:uppercase;color:#68758a}
+.pill{border-radius:999px}
+.ai-box{background:linear-gradient(135deg,#f0f9ff,#ecfeff);border:1px solid #d9f4f5}
+.code{background:#111827;color:#e5e7eb;border-radius:14px;padding:16px;white-space:pre-wrap;font-family:ui-monospace,monospace}
+.exp-card{min-height:170px;transition:transform .2s,box-shadow .2s}
+.exp-card:hover{transform:translateY(-5px);box-shadow:0 14px 35px rgba(25,45,70,.13)}
+.gradient-text{background:linear-gradient(90deg,#087f72,#0d5ea8);-webkit-background-clip:text;color:transparent}

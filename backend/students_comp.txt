@@ -1,0 +1,86 @@
+function Students(){
+ const u=user();
+ if(u?.role!=="admin") return <div className="alert alert-warning">Admin access required.</div>;
+ const [items,setItems]=useState<any[]>([]);
+ const [edit,setEdit]=useState<any>(null);
+ const [msg,setMsg]=useState("");
+ const [form,setForm]=useState<any>({studentCode:"",name:"",email:"",phone:"",course:"Information Technology",batch:"IT-A",monthlyFee:5000,status:"Active"});
+ const load=()=>api.get("/students").then(r=>setItems(r.data)).catch(()=>{});
+ useEffect(()=>{load();},[]);
+
+ 
+ const save=async(e:any)=>{
+  e.preventDefault();
+  try{
+   edit?await api.put("/students/"+edit._id,form):await api.post("/students",form);
+   setEdit(null);
+   setForm({studentCode:"",name:"",email:"",phone:"",course:"Information Technology",batch:"IT-A",monthlyFee:5000,status:"Active"});
+   load();
+  }catch(e:any){setMsg(e.response?.data?.message||"Save failed");}
+ };
+ const del=async(id:string)=>{if(window.confirm("Delete student?")){await api.delete("/students/"+id);load();}};
+
+ const statusBadge=(s:string)=>s==="Active"
+  ?<span className="badge bg-success">Active</span>
+  :<span className="badge bg-secondary">Inactive</span>;
+
+ return <motion.div initial={{opacity:0}} animate={{opacity:1}}>
+  <div className="d-flex justify-content-between align-items-start mb-3">
+   <div>
+    <h2 className="fw-bold mb-1">Students</h2>
+    <p className="text-muted mb-0">Student Records</p>
+   </div>
+   <span className="badge bg-success align-self-start fs-6 px-3 py-2">Live API</span>
+  </div>
+  {msg&&<div className="alert alert-warning alert-dismissible">{msg}<button className="btn-close" onClick={()=>setMsg("")}/></div>}
+
+  <div className="row g-3 mb-3">
+   {[["Total",items.length,"primary"],["Active",items.filter((s:any)=>s.status==="Active").length,"success"],["Inactive",items.filter((s:any)=>s.status==="Inactive").length,"secondary"]].map((x:any)=>(
+    <div className="col-md-4" key={x[0]}>
+     <motion.div whileHover={{y:-3}} className={`card p-3 border-2 border-${x[2]} text-center`}>
+      <div className="small-muted">{x[0]} Students</div>
+      <div className={`fw-bold fs-2 text-${x[2]}`}>{x[1]}</div>
+     </motion.div>
+    </div>
+   ))}
+  </div>
+
+  <div className="card p-4 mb-3">
+   <h5 className="fw-semibold mb-3">{edit?"Edit":"Add"} Student</h5>
+   <form onSubmit={save} className="row g-2">
+    {["studentCode","name","email","phone","course","batch"].map(k=>(
+     <div className="col-md-4" key={k}>
+      <input className="form-control" placeholder={k.charAt(0).toUpperCase()+k.slice(1)} required={["studentCode","name","email"].includes(k)} value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})}/>
+     </div>
+    ))}
+    <div className="col-md-4"><input className="form-control" type="number" placeholder="Monthly Fee" value={form.monthlyFee} onChange={e=>setForm({...form,monthlyFee:Number(e.target.value)})}/></div>
+    <div className="col-md-4"><select className="form-select" value={form.status} onChange={e=>setForm({...form,status:e.target.value})}><option>Active</option><option>Inactive</option></select></div>
+    <div className="col-md-4 d-flex gap-2"><button className="btn btn-primary">Save</button>{edit&&<button type="button" className="btn btn-secondary" onClick={()=>setEdit(null)}>Cancel</button>}</div>
+   </form>
+  </div>
+
+  <div className="card p-3">
+   <div className="table-responsive">
+    <table className="table align-middle">
+     <thead className="table-light"><tr><th>Code</th><th>Name</th><th>Email</th><th>Course</th><th>Batch</th><th>Fee</th><th>Status</th><th>Actions</th></tr></thead>
+     <tbody>
+      {items.map((s:any)=><tr key={s._id}>
+       <td><span className="font-monospace small">{s.studentCode}</span></td>
+       <td className="fw-semibold">{s.name}</td>
+       <td className="text-muted small">{s.email}</td>
+       <td>{s.course}</td>
+       <td><span className="badge bg-light text-dark border">{s.batch}</span></td>
+       <td>Rs.{(s.monthlyFee||0).toLocaleString("en-IN")}</td>
+       <td>{statusBadge(s.status)}</td>
+       <td>
+        {<><button className="btn btn-sm btn-outline-primary me-1" onClick={()=>{setEdit(s);setForm(s)}}>Edit</button><button className="btn btn-sm btn-outline-danger" onClick={()=>del(s._id)}>Delete</button></>}
+        
+       </td>
+      </tr>)}
+     </tbody>
+    </table>
+   </div>
+  </div>
+ </motion.div>;
+}
+

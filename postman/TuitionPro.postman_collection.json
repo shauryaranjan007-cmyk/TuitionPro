@@ -1,0 +1,136 @@
+{
+  "info": {
+    "name": "TuitionPro Pro API (Web Lab Edition)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth - Register POST",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\":\"Test User\",\"email\":\"test@tuitionpro.com\",\"mobile\":\"9876543210\",\"dob\":\"2010-01-01\",\"password\":\"SecurePass123!\"}"
+        },
+        "url": "http://localhost:5000/api/auth/register"
+      }
+    },
+    {
+      "name": "Auth - Login POST",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"admin@tuitionpro.com\",\"password\":\"TuitionProAdmin123\"}"
+        },
+        "url": "http://localhost:5000/api/auth/login"
+      }
+    },
+    {
+      "name": "Health GET",
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:5000/api/health"
+      }
+    },
+    {
+      "name": "Students GET",
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:5000/api/students"
+      }
+    },
+    {
+      "name": "Students POST",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"studentCode\":\"STU2026002\",\"name\":\"Aarav Sharma\",\"email\":\"aarav@example.com\",\"phone\":\"9999999999\",\"course\":\"Information Technology\",\"batch\":\"IT-A\",\"monthlyFee\":5000,\"status\":\"Active\"}"
+        },
+        "url": "http://localhost:5000/api/students"
+      }
+    },
+    {
+      "name": "Students PUT",
+      "request": {
+        "method": "PUT",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"status\":\"Inactive\"}"
+        },
+        "url": "http://localhost:5000/api/students/STUDENT_ID"
+      }
+    },
+    {
+      "name": "Students DELETE",
+      "request": {
+        "method": "DELETE",
+        "url": "http://localhost:5000/api/students/STUDENT_ID"
+      }
+    },
+    {
+      "name": "Courses GET",
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:5000/api/courses"
+      }
+    },
+    {
+      "name": "Batches GET",
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:5000/api/batches"
+      }
+    },
+    {
+      "name": "Attendance GET",
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:5000/api/attendance"
+      }
+    },
+    {
+      "name": "Attendance POST",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"student\":\"STUDENT_ID\",\"date\":\"2026-09-30\",\"status\":\"Present\",\"checkIn\":\"09:55\"}"
+        },
+        "url": "http://localhost:5000/api/attendance"
+      }
+    },
+    {
+      "name": "Payments GET",
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:5000/api/payments"
+      }
+    },
+    {
+      "name": "Payment Summary GET",
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:5000/api/payments/summary"
+      }
+    },
+    {
+      "name": "Record Offline Payment POST",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"student\":\"STUDENT_ID\",\"amount\":5000,\"month\":\"September 2026\",\"status\":\"Paid\",\"method\":\"Cash\"}"
+        },
+        "url": "http://localhost:5000/api/payments/record"
+      }
+    }
+  ]
+}
