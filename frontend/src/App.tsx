@@ -640,58 +640,149 @@ function Students() {
 function Attendance() {
   const u = user(); const admin = u?.role === "admin";
   const [students, setStudents] = useState<any[]>([]);
+  const [subjects, setSubjects] = useState<any[]>([]);
   const [rows, setRows] = useState<any[]>([]);
   const [loaded, setLoaded] = useState(false);
-  const [selected, setSelected] = useState("");
-  const [status, setStatus] = useState("Present");
-  const [note, setNote] = useState("");
   const [summary, setSummary] = useState<any>(null);
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+
+  // Overview class tab filter
+  const [viewClass, setViewClass] = useState("All");
+
+  // Admin Lecture Marking Form State
+  const [markClass, setMarkClass] = useState("Class 8");
+  const [markSubject, setMarkSubject] = useState("");
+  const [markStudent, setMarkStudent] = useState(""); // student id or "ALL"
+  const [markDate, setMarkDate] = useState(new Date().toISOString().slice(0, 10));
+  const [markTime, setMarkTime] = useState("10:00 AM");
+  const [markStatus, setMarkStatus] = useState("Present");
+  const [markNote, setMarkNote] = useState("");
   const [markMsg, setMarkMsg] = useState("");
   const [markErr, setMarkErr] = useState("");
 
-  useEffect(() => {
-    api.get("/students").then(r => setStudents(r.data)).catch(() => { });
-    api.get("/attendance").then(r => { setRows(r.data); setLoaded(true); }).catch(() => { setLoaded(true); });
-  }, []);
-  useEffect(() => {
-    const url = selected ? `/attendance/summary/${selected}` : "/attendance/summary";
-    api.get(url).then(r => setSummary(r.data)).catch(() => { });
-  }, [selected]);
-
-  const mark = async () => {
-    if (!selected) { setMarkErr("Please choose a student."); return; }
-    setMarkMsg(""); setMarkErr("");
-    try {
-      await api.post("/attendance", { student: selected, date, status, checkIn: status === "Late" ? "10:15" : status === "Present" ? "09:55" : "", note });
-      const [a, s] = await Promise.all([api.get("/attendance"), api.get("/attendance/summary/" + selected)]);
-      setRows(a.data); setSummary(s.data);
-      setMarkMsg("✅ Attendance saved!");
-      setTimeout(() => setMarkMsg(""), 3000);
-    } catch (e: any) { setMarkErr(e.response?.data?.message || "Failed to save."); }
+  const loadData = () => {
+    Promise.all([
+      api.get("/students").catch(() => ({ data: [] })),
+      api.get("/subjects").catch(() => ({ data: [] })),
+      api.get("/attendance").catch(() => ({ data: [] }))
+    ]).then(([st, sub, att]) => {
+      setStudents(st.data || []);
+      setSubjects(sub.data || []);
+      setRows(att.data || []);
+      setLoaded(true);
+    });
   };
 
-  // Dynamic stats calculation: uses fetched summary or calculates directly from rows
+  useEffect(() => { loadData(); }, []);
+
+  useEffect(() => {
+    const query = viewClass !== "All" ? `?class=${viewClass.replace(/[^0-9]/g, '')}` : "";
+    api.get(`/attendance/summary${query}`).then(r => setSummary(r.data)).catch(() => { });
+  }, [viewClass]);
+
+  // Filter students based on selected class in the mark form
+  const classStudents = useMemo(() => {
+    if (!markClass) return students;
+    const num = markClass.replace(/[^0-9]/g, '');
+    return students.filter(s => {
+      const bName = s.batch?.name || '';
+      const cName = s.course?.name || '';
+      const cCode = s.course?.code || '';
+      return bName === markClass || cName.includes(markClass) || bName.includes(num) || cCode === `CLS${num}`;
+    });
+  }, [students, markClass]);
+
+  // Filter subjects based on selected class in the mark form
+  const classSubjects = useMemo(() => {
+    if (!markClass) return subjects;
+    const num = markClass.replace(/[^0-9]/g, '');
+    return subjects.filter(sub => {
+      const sName = sub.name || '';
+      const sCode = sub.code || '';
+      return sName.toLowerCase().includes(`class ${num}`) || sCode.startsWith(`CLS${num}-`);
+    });
+  }, [subjects, markClass]);
+
+  // Auto-sync subject and student selection when markClass changes
+  useEffect(() => {
+    if (classSubjects.length > 0) {
+      if (!classSubjects.some(s => (s.id || s._id) === markSubject)) {
+        setMarkSubject(classSubjects[0].id || classSubjects[0]._id);
+      }
+    } else {
+      setMarkSubject("");
+    }
+    if (markStudent && markStudent !== "ALL") {
+      const exists = classStudents.some(s => s._id === markStudent);
+      if (!exists) setMarkStudent("");
+    }
+  }, [markClass, classSubjects, classStudents]);
+
+  const mark = async () => {
+    if (!markStudent) { setMarkErr("Please choose a student or 'All Students'."); return; }
+    setMarkMsg(""); setMarkErr("");
+    try {
+      const payload: any = {
+        date: markDate,
+        status: markStatus,
+        subject: markSubject || undefined,
+        lectureTime: markTime,
+        checkIn: markStatus === "Late" ? "10:15" : markStatus === "Present" ? (markTime || "09:55") : "",
+        note: markNote
+      };
+
+      if (markStudent === "ALL") {
+        if (classStudents.length === 0) {
+          setMarkErr(`No students enrolled in ${markClass} yet.`);
+          return;
+        }
+        await api.post("/attendance/bulk", {
+          students: classStudents.map(s => s._id),
+          ...payload
+        });
+        setMarkMsg(`✅ Attendance marked for all ${classStudents.length} students in ${markClass}!`);
+      } else {
+        await api.post("/attendance", {
+          student: markStudent,
+          ...payload
+        });
+        setMarkMsg("✅ Attendance recorded successfully!");
+      }
+
+      loadData();
+      setTimeout(() => setMarkMsg(""), 3500);
+    } catch (e: any) {
+      setMarkErr(e.response?.data?.message || "Failed to save attendance.");
+    }
+  };
+
+  // Filter rows for the active overview tab
+  const displayRows = useMemo(() => {
+    if (viewClass === "All") return rows;
+    const num = viewClass.replace(/[^0-9]/g, '');
+    return rows.filter(r => {
+      const bName = r.student?.batch?.name || '';
+      const cName = r.student?.course?.name || '';
+      return bName === viewClass || bName.includes(num) || cName.includes(num);
+    });
+  }, [rows, viewClass]);
+
+  // Dynamic stats calculation
   const ds = useMemo(() => {
-    if (summary && summary.total !== undefined && summary.total > 0) {
+    if (summary && summary.total !== undefined && summary.total > 0 && viewClass === "All") {
       return summary;
     }
-    const targetRows = selected
-      ? rows.filter((r: any) => (r.student?._id || r.student) === selected)
-      : rows;
-    if (!targetRows || targetRows.length === 0) {
+    if (!displayRows || displayRows.length === 0) {
       return { present: 0, absent: 0, late: 0, excused: 0, percentage: 0, total: 0 };
     }
-    const present = targetRows.filter((r: any) => r.status === "Present").length;
-    const absent = targetRows.filter((r: any) => r.status === "Absent").length;
-    const late = targetRows.filter((r: any) => r.status === "Late").length;
-    const excused = targetRows.filter((r: any) => r.status === "Excused").length;
-    const total = targetRows.length;
+    const present = displayRows.filter((r: any) => r.status === "Present").length;
+    const absent = displayRows.filter((r: any) => r.status === "Absent").length;
+    const late = displayRows.filter((r: any) => r.status === "Late").length;
+    const excused = displayRows.filter((r: any) => r.status === "Excused").length;
+    const total = displayRows.length;
     const percentage = total > 0 ? Math.round(((present + late) / total) * 100) : 0;
     return { present, absent, late, excused, percentage, total };
-  }, [summary, rows, selected]);
+  }, [summary, displayRows, viewClass]);
 
-  const dr = loaded ? rows : [];
   const PIE_COLORS = ["#22c55e", "#ef4444", "#f59e0b", "#6366f1"];
   const pieData = [
     { name: "Present", value: ds.present || 0 },
@@ -702,15 +793,12 @@ function Attendance() {
   const hasPieData = pieData.some(p => p.value > 0);
 
   const monthBar = useMemo(() => {
-    const targetRows = selected
-      ? rows.filter((r: any) => (r.student?._id || r.student) === selected)
-      : rows;
-    if (!targetRows || targetRows.length === 0) {
+    if (!displayRows || displayRows.length === 0) {
       return [{ m: "Overall", v: ds.percentage || 0 }];
     }
     const monthMap: Record<string, { present: number; total: number }> = {};
     const monthOrder: string[] = [];
-    const sorted = [...targetRows].sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const sorted = [...displayRows].sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
     sorted.forEach((r: any) => {
       const d = new Date(r.date);
       const mName = d.toLocaleDateString("en-US", { month: "short" });
@@ -730,7 +818,7 @@ function Attendance() {
     }));
 
     return data.length > 0 ? data : [{ m: "Overall", v: ds.percentage || 0 }];
-  }, [rows, selected, ds.percentage]);
+  }, [displayRows, ds.percentage]);
 
   const sBadge = (s: string) => {
     if (s === "Present") return <span className="badge bg-success">Present</span>;
@@ -740,12 +828,34 @@ function Attendance() {
   };
 
   return <>
-    <h2 className="fw-bold mb-1">Attendance Intelligence</h2>
-    <p className="text-muted mb-4">{admin ? "Manage and track student attendance." : "View your attendance. Only an administrator can mark attendance."}</p>
+    <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+      <div>
+        <h2 className="fw-bold mb-1">Attendance Intelligence</h2>
+        <p className="text-muted mb-0">{admin ? "Class-wise lecture tracking, attendance marking & insights." : "View your lecture attendance records and overall participation."}</p>
+      </div>
+      <span className="badge bg-primary-subtle text-primary border border-primary-subtle fs-6 px-3 py-2">
+        {admin ? "Administrator Portal" : "Student View"}
+      </span>
+    </div>
+
+    {admin && (
+      <div className="d-flex gap-2 mb-4 flex-wrap align-items-center">
+        <span className="small text-muted fw-bold me-1">View Class:</span>
+        {["All", "Class 8", "Class 9", "Class 10"].map(cls => (
+          <button
+            key={cls}
+            className={`btn btn-sm ${viewClass === cls ? "btn-primary shadow-sm" : "btn-outline-secondary"}`}
+            onClick={() => setViewClass(cls)}
+          >
+            {cls === "All" ? "All Classes" : cls}
+          </button>
+        ))}
+      </div>
+    )}
 
     <div className="row g-3 mb-4">
       {([["Present", ds.present, "success"], ["Absent", ds.absent, "danger"], ["Late", ds.late, "warning"], ["Rate %", (ds.percentage || 0) + "%", "primary"]] as any[]).map((x: any) => <div className="col-6 col-md-3" key={x[0]}>
-        <motion.div whileHover={{ y: -3 }} className="card p-3 text-center">
+        <motion.div whileHover={{ y: -3 }} className="card p-3 text-center border-0 shadow-sm">
           <div className="small-muted">{x[0]}</div>
           <div className={`fw-bold fs-3 mt-1 text-${x[2]}`}>{x[1]}</div>
         </motion.div>
@@ -753,9 +863,10 @@ function Attendance() {
     </div>
 
     <div className="row g-3 mb-4">
-      <div className="col-lg-5">
-        <div className="card p-4 h-100">
+      <div className="col-lg-4">
+        <div className="card p-4 h-100 border-0 shadow-sm">
           <h5 className="fw-semibold mb-1">Attendance Breakdown</h5>
+          <small className="text-muted mb-3 d-block">{viewClass === "All" ? "Overall Distribution" : `${viewClass} Distribution`}</small>
           {!loaded ? <div className="text-center text-muted py-4"><span className="spinner-border spinner-border-sm" /> Loading...</div> :
             !hasPieData ? (
               <div className="text-center text-muted py-5">
@@ -763,9 +874,9 @@ function Attendance() {
                 <p className="mb-0">No attendance records recorded yet.</p>
               </div>
             ) : (
-            <ResponsiveContainer width="100%" height={270}>
+            <ResponsiveContainer width="100%" height={260}>
               <PieChart>
-                <Pie data={pieData.filter(d => d.value > 0)} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={95} label={({ name, percent }: any) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                <Pie data={pieData.filter(d => d.value > 0)} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label={({ name, percent }: any) => `${name} ${(percent * 100).toFixed(0)}%`}>
                   {pieData.filter(d => d.value > 0).map((entry: any) => {
                     const idx = pieData.findIndex(p => p.name === entry.name);
                     return <Cell key={entry.name} fill={PIE_COLORS[idx >= 0 ? idx : 0]} />;
@@ -779,10 +890,11 @@ function Attendance() {
         </div>
       </div>
 
-      <div className={admin ? "col-lg-4" : "col-lg-7"}>
-        <div className="card p-4 h-100">
+      <div className={admin ? "col-lg-4" : "col-lg-8"}>
+        <div className="card p-4 h-100 border-0 shadow-sm">
           <h5 className="fw-semibold mb-1">Monthly Trend</h5>
-          <ResponsiveContainer width="100%" height={230}>
+          <small className="text-muted mb-3 d-block">Lecture participation by month</small>
+          <ResponsiveContainer width="100%" height={260}>
             <BarChart data={monthBar}>
               <XAxis dataKey="m" /><YAxis domain={[0, 100]} /><Tooltip />
               <Bar dataKey="v" fill="#6366f1" radius={[4, 4, 0, 0]} />
@@ -791,41 +903,135 @@ function Attendance() {
         </div>
       </div>
 
-      {admin && <div className="col-lg-3">
-        <div className="card p-4 h-100">
-          <h5 className="fw-semibold mb-3">Mark Attendance</h5>
+      {admin && <div className="col-lg-4">
+        <div className="card p-4 h-100 border-0 shadow-sm bg-light-subtle">
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <h5 className="fw-bold mb-0">✍️ Mark Attendance</h5>
+            <span className="badge bg-primary text-white">Lecture Wise</span>
+          </div>
+
           {markMsg && <div className="alert alert-success py-2 small">{markMsg}</div>}
           {markErr && <div className="alert alert-danger py-2 small">{markErr}</div>}
-          <label className="form-label small fw-semibold">Student</label>
-          <select className="form-select mb-2" value={selected} onChange={e => setSelected(e.target.value)}>
-            <option value="">Choose...</option>
-            {students.map((s: any) => <option value={s._id} key={s._id}>{s.name}</option>)}
+
+          {/* 1. Class / Standard */}
+          <label className="form-label small fw-bold mb-1">1. Class / Standard</label>
+          <select className="form-select form-select-sm mb-2 fw-semibold border-primary-subtle" value={markClass} onChange={e => setMarkClass(e.target.value)}>
+            <option value="Class 8">Class 8</option>
+            <option value="Class 9">Class 9</option>
+            <option value="Class 10">Class 10</option>
           </select>
-          <label className="form-label small fw-semibold">Date</label>
-          <input className="form-control mb-2" type="date" value={date} onChange={e => setDate(e.target.value)} />
-          <label className="form-label small fw-semibold">Status</label>
-          <select className="form-select mb-2" value={status} onChange={e => setStatus(e.target.value)}>
-            <option>Present</option><option>Absent</option><option>Late</option><option>Excused</option>
+
+          {/* 2. Subject Lecture */}
+          <label className="form-label small fw-bold mb-1">2. Subject Lecture</label>
+          <select className="form-select form-select-sm mb-2" value={markSubject} onChange={e => setMarkSubject(e.target.value)}>
+            {classSubjects.length === 0 ? <option value="">No subjects found for {markClass}</option> :
+              classSubjects.map(s => <option value={s.id || s._id} key={s.id || s._id}>{s.name} ({s.code})</option>)
+            }
           </select>
-          <label className="form-label small fw-semibold">Note (optional)</label>
-          <input className="form-control mb-3" placeholder="e.g. Medical leave" value={note} onChange={e => setNote(e.target.value)} />
-          <button className="btn btn-primary w-100" onClick={mark}>Save Attendance</button>
+
+          {/* 3. Day & Lecture Time */}
+          <div className="row g-2 mb-2">
+            <div className="col-6">
+              <label className="form-label small fw-bold mb-1">3. Date</label>
+              <input className="form-control form-control-sm" type="date" value={markDate} onChange={e => setMarkDate(e.target.value)} />
+            </div>
+            <div className="col-6">
+              <label className="form-label small fw-bold mb-1">Time Slot</label>
+              <input className="form-control form-control-sm" type="text" placeholder="e.g. 10:00 AM" value={markTime} onChange={e => setMarkTime(e.target.value)} />
+            </div>
+          </div>
+          <div className="d-flex gap-1 mb-2 flex-wrap">
+            {["09:00 AM", "10:00 AM", "11:30 AM", "04:00 PM", "05:30 PM"].map(slot => (
+              <button
+                type="button"
+                key={slot}
+                onClick={() => setMarkTime(slot)}
+                className={`btn btn-xs py-0 px-2 border rounded-pill ${markTime === slot ? "btn-primary text-white" : "btn-light text-muted"}`}
+                style={{ fontSize: "11px" }}
+              >
+                {slot}
+              </button>
+            ))}
+          </div>
+
+          {/* 4. Student (Filtered to this Class!) */}
+          <label className="form-label small fw-bold mb-1">
+            4. Student <span className="text-primary">({classStudents.length} in {markClass})</span>
+          </label>
+          <select className="form-select form-select-sm mb-2" value={markStudent} onChange={e => setMarkStudent(e.target.value)}>
+            <option value="">Select Student...</option>
+            <option value="ALL">👥 Mark ALL {classStudents.length} Students in {markClass}</option>
+            <optgroup label={`Students in ${markClass}`}>
+              {classStudents.map((s: any) => (
+                <option value={s._id} key={s._id}>{s.name} [{s.studentCode}]</option>
+              ))}
+            </optgroup>
+          </select>
+
+          {/* 5. Status & Note */}
+          <div className="row g-2 mb-2">
+            <div className="col-6">
+              <label className="form-label small fw-bold mb-1">Status</label>
+              <select className="form-select form-select-sm" value={markStatus} onChange={e => setMarkStatus(e.target.value)}>
+                <option>Present</option><option>Absent</option><option>Late</option><option>Excused</option>
+              </select>
+            </div>
+            <div className="col-6">
+              <label className="form-label small fw-bold mb-1">Lecture Topic / Note</label>
+              <input className="form-control form-control-sm" placeholder="e.g. Chapter 3" value={markNote} onChange={e => setMarkNote(e.target.value)} />
+            </div>
+          </div>
+
+          <button className="btn btn-primary btn-sm w-100 fw-bold mt-2 py-2 shadow-sm" onClick={mark}>
+            Save Lecture Attendance
+          </button>
         </div>
       </div>}
     </div>
 
-    <div className="card p-3">
-      <h5 className="fw-semibold mb-3">Recent Records</h5>
+    <div className="card p-3 border-0 shadow-sm">
+      <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h5 className="fw-semibold mb-0">Recent Attendance Records</h5>
+        <span className="small text-muted">Showing {displayRows.slice(0, 20).length} of {displayRows.length} records</span>
+      </div>
       <div className="table-responsive">
-        <table className="table align-middle">
-          <thead className="table-light"><tr><th>Student</th><th>Date</th><th>Status</th><th>Check-in</th><th>Note</th></tr></thead>
+        <table className="table align-middle table-hover">
+          <thead className="table-light">
+            <tr>
+              <th>Student</th>
+              <th>Class</th>
+              <th>Date & Time</th>
+              <th>Subject Lecture</th>
+              <th>Status</th>
+              <th>Note</th>
+            </tr>
+          </thead>
           <tbody>
-            {dr.length === 0 && loaded && <tr><td colSpan={5} className="text-center text-muted py-4">No attendance records found.</td></tr>}
-            {dr.slice(0, 15).map((r: any) => <tr key={r._id}>
-              <td className="fw-semibold">{r.student?.name || "—"}</td>
-              <td>{new Date(r.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</td>
+            {displayRows.length === 0 && loaded && <tr><td colSpan={6} className="text-center text-muted py-4">No attendance records found for this view.</td></tr>}
+            {displayRows.slice(0, 20).map((r: any) => <tr key={r._id}>
+              <td>
+                <div className="fw-semibold">{r.student?.name || "—"}</div>
+                <small className="text-muted font-monospace">{r.student?.studentCode || ""}</small>
+              </td>
+              <td>
+                <span className="badge bg-light text-dark border">
+                  {r.student?.batch?.name || r.student?.course?.name || "Class"}
+                </span>
+              </td>
+              <td>
+                <div>{new Date(r.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</div>
+                <small className="text-muted font-monospace">{r.lectureTime || r.checkIn || "09:55 AM"}</small>
+              </td>
+              <td>
+                {r.subject?.name ? (
+                  <span className="badge bg-primary-subtle text-primary border border-primary-subtle">
+                    {r.subject.name}
+                  </span>
+                ) : (
+                  <span className="text-muted small">General Lecture</span>
+                )}
+              </td>
               <td>{sBadge(r.status)}</td>
-              <td><span className="font-monospace small">{r.checkIn || "—"}</span></td>
               <td className="text-muted small">{r.note || "—"}</td>
             </tr>)}
           </tbody>
