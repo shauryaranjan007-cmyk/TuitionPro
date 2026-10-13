@@ -1,4 +1,3 @@
-import BatchList from './BatchList';
 import { BrowserRouter, Routes, Route, NavLink, Link, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -32,7 +31,6 @@ function Layout({ children }: { children: any }) {
     .sidebar-link.active { background-color: #3b82f6 !important; color: #ffffff !important; font-weight: 600; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3); }
     .sidebar-header { font-size: 0.7rem; letter-spacing: 1px; text-transform: uppercase; color: #64748b; font-weight: 700; margin-top: 1.5rem; margin-bottom: 0.5rem; padding-left: 1rem; }
   `}</style>
-    <BatchList />
     <AnimatePresence>
       {open && <motion.aside initial={{ width: 0, opacity: 0 }} animate={{ width: 260, opacity: 1 }} exit={{ width: 0, opacity: 0 }} className="d-flex flex-column shadow-lg sticky-top overflow-hidden text-nowrap" style={{ height: "100vh", backgroundColor: "#0f172a", zIndex: 1000 }}>
         <div className="p-3 d-flex flex-column h-100">
@@ -132,7 +130,6 @@ function Login() {
     >
       <div className="col-lg-5">
         <div className="card p-4 mt-5">
-          <BatchList />
           <h2 className="gradient-text fw-bold">
             Welcome to TuitionPro
           </h2>
