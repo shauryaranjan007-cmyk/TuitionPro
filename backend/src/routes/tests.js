@@ -9,7 +9,26 @@ const router = express.Router();
 
 router.get('/', protect, async (req, res, next) => {
   try {
-    const tests = await Test.find().populate('subject', 'name');
+    let query = {};
+    if (req.user.role === 'student') {
+      const student = await Student.findOne({
+        $or: [
+          { user: req.user.id },
+          { email: req.user.email }
+        ]
+      }).populate('batch course');
+
+      if (student) {
+        const batchName = student.batch?.name || student.course?.name || '';
+        const match = batchName.match(/\b(8|9|10)\b/);
+        if (match) {
+          query.batch = new RegExp(`Class\\s*${match[1]}\\b`, 'i');
+        } else if (batchName) {
+          query.batch = batchName;
+        }
+      }
+    }
+    const tests = await Test.find(query).populate('subject', 'name');
     res.json(tests);
   } catch (error) {
     next(error);

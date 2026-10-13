@@ -6,7 +6,7 @@ const r=express.Router();
 
 async function ownStudentId(req){
   if(req.user.role==="admin") return null;
-  const s=await Student.findOne({user:req.user.id}).select("_id");
+  const s=await Student.findOne({ $or: [{user:req.user.id}, {email:req.user.email}] }).select("_id");
   return s?String(s._id):null;
 }
 
@@ -26,6 +26,26 @@ r.get("/",protect,async(req,res,next)=>{
     if(req.query.to)q.date.$lte=new Date(req.query.to+"T23:59:59");
   }
   res.json(await Attendance.find(q).populate("student","name studentCode").sort({date:-1}));
+ }catch(e){next(e);}
+});
+
+r.get("/summary",protect,async(req,res,next)=>{
+ try{
+  const q={};
+  if(req.user.role!=="admin"){
+    const id=await ownStudentId(req);
+    if(!id) return res.json({total:0,present:0,absent:0,late:0,excused:0,percentage:0});
+    q.student=id;
+  }else if(req.query.student){
+    q.student=req.query.student;
+  }
+  const all=await Attendance.find(q);
+  const total=all.length;
+  const present=all.filter(x=>x.status==="Present"||x.status==="Late").length;
+  const absent=all.filter(x=>x.status==="Absent").length;
+  const late=all.filter(x=>x.status==="Late").length;
+  const excused=all.filter(x=>x.status==="Excused").length;
+  res.json({total,present,absent,late,excused,percentage:total?Math.round(present/total*100):0});
  }catch(e){next(e);}
 });
 

@@ -5,6 +5,7 @@ import { protect, adminOnly } from '../middleware/auth.js';
 import Subject from '../models/Subject.js';
 import Material from '../models/Material.js';
 import Assignment from '../models/Assignment.js';
+import Student from '../models/Student.js';
 import fs from 'fs';
 
 const router = express.Router();
@@ -34,7 +35,47 @@ const upload = multer({
 
 router.get('/', protect, async (req, res, next) => {
   try {
-    const subjects = await Subject.find();
+    let query = {};
+    if (req.user.role === 'student') {
+      const student = await Student.findOne({
+        $or: [
+          { user: req.user.id },
+          { email: req.user.email }
+        ]
+      }).populate('course batch');
+
+      if (student) {
+        const batchName = student.batch?.name || '';
+        const courseName = student.course?.name || '';
+        const courseCode = student.course?.code || '';
+        const combined = `${batchName} ${courseName} ${courseCode}`;
+        const match = combined.match(/\b(8|9|10)\b/) || combined.match(/CLS(\d+)/i);
+
+        if (match) {
+          const classNum = match[1];
+          query = {
+            $or: [
+              { code: new RegExp(`^CLS${classNum}-`, 'i') },
+              { name: new RegExp(`Class\\s*${classNum}\\b`, 'i') }
+            ]
+          };
+        } else if (courseCode) {
+          query = { code: new RegExp(`^${courseCode}-`, 'i') };
+        }
+      }
+    } else if (req.query.class) {
+      const classNum = String(req.query.class).replace(/[^0-9]/g, '');
+      if (classNum) {
+        query = {
+          $or: [
+            { code: new RegExp(`^CLS${classNum}-`, 'i') },
+            { name: new RegExp(`Class\\s*${classNum}\\b`, 'i') }
+          ]
+        };
+      }
+    }
+
+    const subjects = await Subject.find(query);
     const payload = await Promise.all(subjects.map(async (subj) => {
       const notes = await Material.find({ subject: subj._id });
       const assignments = await Assignment.find({ subject: subj._id });

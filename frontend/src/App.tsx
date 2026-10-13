@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, NavLink, Link, Navigate, useNavigate, useLocation } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Legend } from "recharts";
 import { api } from "./api";
@@ -655,7 +655,8 @@ function Attendance() {
     api.get("/attendance").then(r => { setRows(r.data); setLoaded(true); }).catch(() => { setLoaded(true); });
   }, []);
   useEffect(() => {
-    if (selected) api.get("/attendance/summary/" + selected).then(r => setSummary(r.data)).catch(() => { });
+    const url = selected ? `/attendance/summary/${selected}` : "/attendance/summary";
+    api.get(url).then(r => setSummary(r.data)).catch(() => { });
   }, [selected]);
 
   const mark = async () => {
@@ -670,9 +671,26 @@ function Attendance() {
     } catch (e: any) { setMarkErr(e.response?.data?.message || "Failed to save."); }
   };
 
-  // Only use real data; show zeros when loaded but empty
-  const emptyStats = { present: 0, absent: 0, late: 0, excused: 0, percentage: 0 };
-  const ds = loaded ? (summary || emptyStats) : { present: 62, absent: 12, late: 8, excused: 4, percentage: 72 };
+  // Dynamic stats calculation: uses fetched summary or calculates directly from rows
+  const ds = useMemo(() => {
+    if (summary && summary.total !== undefined && summary.total > 0) {
+      return summary;
+    }
+    const targetRows = selected
+      ? rows.filter((r: any) => (r.student?._id || r.student) === selected)
+      : rows;
+    if (!targetRows || targetRows.length === 0) {
+      return { present: 0, absent: 0, late: 0, excused: 0, percentage: 0, total: 0 };
+    }
+    const present = targetRows.filter((r: any) => r.status === "Present").length;
+    const absent = targetRows.filter((r: any) => r.status === "Absent").length;
+    const late = targetRows.filter((r: any) => r.status === "Late").length;
+    const excused = targetRows.filter((r: any) => r.status === "Excused").length;
+    const total = targetRows.length;
+    const percentage = total > 0 ? Math.round(((present + late) / total) * 100) : 0;
+    return { present, absent, late, excused, percentage, total };
+  }, [summary, rows, selected]);
+
   const dr = loaded ? rows : [];
   const PIE_COLORS = ["#22c55e", "#ef4444", "#f59e0b", "#6366f1"];
   const pieData = [
@@ -681,7 +699,38 @@ function Attendance() {
     { name: "Late", value: ds.late || 0 },
     { name: "Excused", value: ds.excused || 0 },
   ];
-  const monthBar = [{ m: "May", v: 72 }, { m: "Jun", v: 79 }, { m: "Jul", v: 84 }, { m: "Aug", v: 81 }, { m: "Sep", v: ds.percentage || 0 }];
+  const hasPieData = pieData.some(p => p.value > 0);
+
+  const monthBar = useMemo(() => {
+    const targetRows = selected
+      ? rows.filter((r: any) => (r.student?._id || r.student) === selected)
+      : rows;
+    if (!targetRows || targetRows.length === 0) {
+      return [{ m: "Overall", v: ds.percentage || 0 }];
+    }
+    const monthMap: Record<string, { present: number; total: number }> = {};
+    const monthOrder: string[] = [];
+    const sorted = [...targetRows].sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    sorted.forEach((r: any) => {
+      const d = new Date(r.date);
+      const mName = d.toLocaleDateString("en-US", { month: "short" });
+      if (!monthMap[mName]) {
+        monthMap[mName] = { present: 0, total: 0 };
+        monthOrder.push(mName);
+      }
+      monthMap[mName].total += 1;
+      if (r.status === "Present" || r.status === "Late") {
+        monthMap[mName].present += 1;
+      }
+    });
+
+    const data = monthOrder.map(m => ({
+      m,
+      v: Math.round((monthMap[m].present / monthMap[m].total) * 100)
+    }));
+
+    return data.length > 0 ? data : [{ m: "Overall", v: ds.percentage || 0 }];
+  }, [rows, selected, ds.percentage]);
 
   const sBadge = (s: string) => {
     if (s === "Present") return <span className="badge bg-success">Present</span>;
@@ -708,15 +757,25 @@ function Attendance() {
         <div className="card p-4 h-100">
           <h5 className="fw-semibold mb-1">Attendance Breakdown</h5>
           {!loaded ? <div className="text-center text-muted py-4"><span className="spinner-border spinner-border-sm" /> Loading...</div> :
+            !hasPieData ? (
+              <div className="text-center text-muted py-5">
+                <div className="fs-2 mb-2">📋</div>
+                <p className="mb-0">No attendance records recorded yet.</p>
+              </div>
+            ) : (
             <ResponsiveContainer width="100%" height={270}>
               <PieChart>
-                <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={95} label={({ name, percent }: any) => `${(percent * 100).toFixed(0)}%`}>
-                  {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i]} />)}
+                <Pie data={pieData.filter(d => d.value > 0)} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={95} label={({ name, percent }: any) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                  {pieData.filter(d => d.value > 0).map((entry: any) => {
+                    const idx = pieData.findIndex(p => p.name === entry.name);
+                    return <Cell key={entry.name} fill={PIE_COLORS[idx >= 0 ? idx : 0]} />;
+                  })}
                 </Pie>
                 <Tooltip />
                 <Legend />
               </PieChart>
-            </ResponsiveContainer>}
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 
@@ -1054,12 +1113,14 @@ function Subjects() {
   const [subs, setSubs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [classFilter, setClassFilter] = useState("All");
 
-  const load = () => {
+  const load = (cls = classFilter) => {
     setLoading(true);
-    api.get("/subjects").then(r => { setSubs(r.data); setLoading(false); }).catch(() => { setError("Failed to load subjects."); setLoading(false); });
+    const query = admin && cls !== "All" ? `?class=${cls.replace(/[^0-9]/g, '')}` : "";
+    api.get(`/subjects${query}`).then(r => { setSubs(r.data); setLoading(false); }).catch(() => { setError("Failed to load subjects."); setLoading(false); });
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(classFilter); }, [classFilter]);
 
   const handleUpload = async (subjectId: string, e: any) => {
     const file = e.target.files[0];
@@ -1083,10 +1144,24 @@ function Subjects() {
     <div className="d-flex justify-content-between align-items-start mb-4">
       <div>
         <h2 className="fw-bold mb-1">📚 Subjects & Materials</h2>
-        <p className="text-muted mb-0">Course notes, real video lectures, and assignments.</p>
+        <p className="text-muted mb-0">{admin ? "Course notes, real video lectures, and assignments across all classes." : "Curated study materials, video lectures, and assignments for your class."}</p>
       </div>
-      <span className="badge bg-success fs-6 px-3 py-2">Live API</span>
+      <span className="badge bg-success fs-6 px-3 py-2">{admin ? "Admin View" : "My Class Curriculum"}</span>
     </div>
+
+    {admin && (
+      <div className="d-flex gap-2 mb-4 flex-wrap">
+        {["All", "Class 8", "Class 9", "Class 10"].map(cls => (
+          <button
+            key={cls}
+            className={`btn btn-sm ${classFilter === cls ? "btn-primary shadow-sm" : "btn-outline-secondary"}`}
+            onClick={() => setClassFilter(cls)}
+          >
+            {cls === "All" ? "All Classes" : cls}
+          </button>
+        ))}
+      </div>
+    )}
 
 
     {admin && (
