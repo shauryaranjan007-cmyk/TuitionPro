@@ -20,8 +20,8 @@ const admin=await User.create({name:"TuitionPro Admin",email:adminEmail,password
 const studentUser=await User.create({name:"Rahul Kumar",email:studentEmail,password:await bcrypt.hash(studentPassword,12),role:"student"});
 
 const c=await Course.create({name:"Information Technology",code:"IT",duration:"4 Years",fee:5000});
-await Batch.create({name:"IT-A",course:c.name,schedule:"Mon-Wed-Fri 10:00 AM"});
-const s=await Student.create({user:studentUser._id,studentCode:"STU2026001",name:"Rahul Kumar",email:studentEmail,phone:"9876543210",course:c.name,batch:"IT-A",monthlyFee:5000,status:"Active"});
+const b=await Batch.create({name:"IT-A",course:c._id,schedule:"Mon-Wed-Fri 10:00 AM"});
+const s=await Student.create({user:studentUser._id,studentCode:"STU2026001",name:"Rahul Kumar",email:studentEmail,phone:"9876543210",course:c._id,batch:b._id,monthlyFee:5000,status:"Active"});
 
 for(const i of [0,1,2,3,4,5,6,7,8,9])
   await Attendance.create({student:s._id,date:new Date(Date.now()-i*86400000),status:i%5===0?"Absent":i%3===0?"Late":"Present",checkIn:i%3===0?"10:12":"09:55"});

@@ -30,14 +30,15 @@ router.post("/register",async(req,res,next)=>{
   const password=String(req.body.password||"");
   const mobile=String(req.body.mobile||"").trim();
   const dob=req.body.dob ? new Date(req.body.dob) : null;
-  
+  const role=["admin","student"].includes(req.body.role) ? req.body.role : "student";
+
   if(name.length<2||name.length>80) return res.status(400).json({message:"Name must be 2-80 characters"});
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({message:"Valid email required"});
   if(!/^\d{10}$/.test(mobile)) return res.status(400).json({message:"Valid 10-digit mobile number required"});
   if(!dob || isNaN(dob.getTime()) || dob > new Date() || (new Date().getFullYear() - dob.getFullYear() < 5)) return res.status(400).json({message:"Valid date of birth required (age >= 5)"});
   if(password.length<8 || !/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) return res.status(400).json({message:"Password must contain at least 8 characters, including a letter and a number"});
   if(await User.findOne({email})) return res.status(409).json({message:"Email already registered"});
-  const u=await User.create({name,email,password:await bcrypt.hash(password,12),role:"student",mobile,dob});
+  const u=await User.create({name,email,password:await bcrypt.hash(password,12),role,mobile,dob});
   res.cookie("tp_token",token(u),cookieOptions());
   res.status(201).json({user:publicUser(u)});
  }catch(e){next(e);}
