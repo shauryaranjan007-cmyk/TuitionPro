@@ -4,6 +4,20 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
+
+// Preload all Mongoose models to register schemas for population
+import "./models/User.js";
+import "./models/Course.js";
+import "./models/Batch.js";
+import "./models/Subject.js";
+import "./models/Student.js";
+import "./models/Attendance.js";
+import "./models/Payment.js";
+import "./models/Material.js";
+import "./models/Assignment.js";
+import "./models/Test.js";
+import "./models/Mark.js";
+
 import authRoutes from "./routes/auth.js";
 import studentRoutes from "./routes/students.js";
 import courseRoutes from "./routes/courses.js";

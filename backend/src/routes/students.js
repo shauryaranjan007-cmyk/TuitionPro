@@ -1,5 +1,7 @@
 import express from "express";
 import Student from "../models/Student.js";
+import Course from "../models/Course.js";
+import Batch from "../models/Batch.js";
 import {protect,adminOnly} from "../middleware/auth.js";
 import Payment from "../models/Payment.js";
 import Attendance from "../models/Attendance.js";

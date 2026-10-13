@@ -659,17 +659,20 @@ function Attendance() {
   const [markMsg, setMarkMsg] = useState("");
   const [markErr, setMarkErr] = useState("");
 
-  const loadData = () => {
-    Promise.all([
-      api.get("/students").catch(() => ({ data: [] })),
-      api.get("/subjects").catch(() => ({ data: [] })),
-      api.get("/attendance").catch(() => ({ data: [] }))
-    ]).then(([st, sub, att]) => {
+  const loadData = async () => {
+    try {
+      const [st, sub, att] = await Promise.all([
+        api.get("/students").catch(() => ({ data: [] })),
+        api.get("/subjects").catch(() => ({ data: [] })),
+        api.get("/attendance").catch(() => ({ data: [] }))
+      ]);
       setStudents(st.data || []);
       setSubjects(sub.data || []);
       setRows(att.data || []);
       setLoaded(true);
-    });
+    } catch {
+      setLoaded(true);
+    }
   };
 
   useEffect(() => { loadData(); }, []);
@@ -684,10 +687,16 @@ function Attendance() {
     if (!markClass) return students;
     const num = markClass.replace(/[^0-9]/g, '');
     return students.filter(s => {
-      const bName = s.batch?.name || '';
-      const cName = s.course?.name || '';
-      const cCode = s.course?.code || '';
-      return bName === markClass || cName.includes(markClass) || bName.includes(num) || cCode === `CLS${num}`;
+      const bName = (typeof s.batch === 'object' ? s.batch?.name : s.batch) || '';
+      const cName = (typeof s.course === 'object' ? s.course?.name : s.course) || '';
+      const cCode = (typeof s.course === 'object' ? s.course?.code : '') || '';
+      return (
+        bName.toLowerCase().includes(`class ${num}`) ||
+        bName.toLowerCase().includes(`class${num}`) ||
+        cName.toLowerCase().includes(`class ${num}`) ||
+        cCode === `CLS${num}` ||
+        bName === markClass
+      );
     });
   }, [students, markClass]);
 
@@ -698,7 +707,7 @@ function Attendance() {
     return subjects.filter(sub => {
       const sName = sub.name || '';
       const sCode = sub.code || '';
-      return sName.toLowerCase().includes(`class ${num}`) || sCode.startsWith(`CLS${num}-`);
+      return sName.toLowerCase().includes(`class ${num}`) || sCode.startsWith(`CLS${num}-`) || sCode.startsWith(`CLS${num}_`);
     });
   }, [subjects, markClass]);
 
@@ -748,7 +757,7 @@ function Attendance() {
         setMarkMsg("✅ Attendance recorded successfully!");
       }
 
-      loadData();
+      await loadData();
       setTimeout(() => setMarkMsg(""), 3500);
     } catch (e: any) {
       setMarkErr(e.response?.data?.message || "Failed to save attendance.");
@@ -760,11 +769,20 @@ function Attendance() {
     if (viewClass === "All") return rows;
     const num = viewClass.replace(/[^0-9]/g, '');
     return rows.filter(r => {
-      const bName = r.student?.batch?.name || '';
-      const cName = r.student?.course?.name || '';
-      return bName === viewClass || bName.includes(num) || cName.includes(num);
+      const sId = typeof r.student === 'object' ? r.student?._id : r.student;
+      const s = students.find((st: any) => st._id === sId) || (typeof r.student === 'object' ? r.student : null);
+      const bName = (typeof s?.batch === 'object' ? s?.batch?.name : s?.batch) || '';
+      const cName = (typeof s?.course === 'object' ? s?.course?.name : s?.course) || '';
+      const cCode = (typeof s?.course === 'object' ? s?.course?.code : '') || '';
+      return (
+        bName.toLowerCase().includes(`class ${num}`) ||
+        bName.toLowerCase().includes(`class${num}`) ||
+        cName.toLowerCase().includes(`class ${num}`) ||
+        cCode === `CLS${num}` ||
+        bName === viewClass
+      );
     });
-  }, [rows, viewClass]);
+  }, [rows, students, viewClass]);
 
   // Dynamic stats calculation
   const ds = useMemo(() => {
@@ -992,7 +1010,7 @@ function Attendance() {
     <div className="card p-3 border-0 shadow-sm">
       <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <h5 className="fw-semibold mb-0">Recent Attendance Records</h5>
-        <span className="small text-muted">Showing {displayRows.slice(0, 20).length} of {displayRows.length} records</span>
+        <span className="small text-muted">Showing {displayRows.slice(0, 25).length} of {displayRows.length} records</span>
       </div>
       <div className="table-responsive">
         <table className="table align-middle table-hover">
@@ -1008,32 +1026,38 @@ function Attendance() {
           </thead>
           <tbody>
             {displayRows.length === 0 && loaded && <tr><td colSpan={6} className="text-center text-muted py-4">No attendance records found for this view.</td></tr>}
-            {displayRows.slice(0, 20).map((r: any) => <tr key={r._id}>
-              <td>
-                <div className="fw-semibold">{r.student?.name || "—"}</div>
-                <small className="text-muted font-monospace">{r.student?.studentCode || ""}</small>
-              </td>
-              <td>
-                <span className="badge bg-light text-dark border">
-                  {r.student?.batch?.name || r.student?.course?.name || "Class"}
-                </span>
-              </td>
-              <td>
-                <div>{new Date(r.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</div>
-                <small className="text-muted font-monospace">{r.lectureTime || r.checkIn || "09:55 AM"}</small>
-              </td>
-              <td>
-                {r.subject?.name ? (
-                  <span className="badge bg-primary-subtle text-primary border border-primary-subtle">
-                    {r.subject.name}
-                  </span>
-                ) : (
-                  <span className="text-muted small">General Lecture</span>
-                )}
-              </td>
-              <td>{sBadge(r.status)}</td>
-              <td className="text-muted small">{r.note || "—"}</td>
-            </tr>)}
+            {displayRows.slice(0, 25).map((r: any) => {
+              const sId = typeof r.student === 'object' ? r.student?._id : r.student;
+              const s = students.find((st: any) => st._id === sId) || (typeof r.student === 'object' ? r.student : null);
+              const studentName = s?.name || (typeof r.student === 'object' ? r.student?.name : '—');
+              const studentCode = s?.studentCode || (typeof r.student === 'object' ? r.student?.studentCode : '');
+              const batchName = (typeof s?.batch === 'object' ? s?.batch?.name : s?.batch) || (typeof r.student === 'object' ? (typeof r.student?.batch === 'object' ? r.student?.batch?.name : r.student?.batch) : '') || 'Class';
+              const subName = r.subject?.name || (typeof r.subject === 'string' ? subjects.find(sub => sub.id === r.subject || sub._id === r.subject)?.name : '') || 'General Lecture';
+              return (
+                <tr key={r._id}>
+                  <td>
+                    <div className="fw-semibold">{studentName}</div>
+                    <small className="text-muted font-monospace">{studentCode}</small>
+                  </td>
+                  <td>
+                    <span className="badge bg-light text-dark border">
+                      {batchName}
+                    </span>
+                  </td>
+                  <td>
+                    <div>{new Date(r.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</div>
+                    <small className="text-muted font-monospace">{r.lectureTime || r.checkIn || "09:55 AM"}</small>
+                  </td>
+                  <td>
+                    <span className="badge bg-primary-subtle text-primary border border-primary-subtle">
+                      {subName}
+                    </span>
+                  </td>
+                  <td>{sBadge(r.status)}</td>
+                  <td className="text-muted small">{r.note || "—"}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

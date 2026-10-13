@@ -2,6 +2,7 @@ import express from "express";
 import Attendance from "../models/Attendance.js";
 import Student from "../models/Student.js";
 import Batch from "../models/Batch.js";
+import Course from "../models/Course.js";
 import Subject from "../models/Subject.js";
 import {protect,adminOnly} from "../middleware/auth.js";
 const r=express.Router();
