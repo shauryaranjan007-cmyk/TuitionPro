@@ -174,12 +174,12 @@ const s8maths   = await Subject.create({name:"Class 8 Mathematics", code:"CLS8-M
 const s8science = await Subject.create({name:"Class 8 Science",     code:"CLS8-SCI",  description:"NCERT Class 8 Science: Physics, Chemistry, Biology"});
 const s8english = await Subject.create({name:"Class 8 English",     code:"CLS8-ENG",  description:"Honeydew & It So Happened – NCERT Class 8"});
 
-await Material.create({subject:s8maths._id,   title:"Class 8 Maths NCERT – Full Playlist (YouTube)", type:"YouTube", link:"https://www.youtube.com/playlist?list=PLmd2GEKBxl37CvvVaYOhQF_yFIy5T7WzL"});
+await Material.create({subject:s8maths._id,   title:"Class 8 Maths NCERT – Full Course (YouTube)", type:"YouTube", link:"https://www.youtube.com/watch?v=OmJ-4B-mS-Y"});
 await Material.create({subject:s8maths._id,   title:"NCERT Class 8 Maths Textbook PDF",             type:"Link",    link:"https://ncert.nic.in/textbook.php?hemh1=0-16"});
 await Material.create({subject:s8maths._id,   title:"Khan Academy – Algebra Basics",                type:"Link",    link:"https://www.khanacademy.org/math/algebra"});
-await Material.create({subject:s8science._id, title:"Class 8 Science NCERT – All Chapters (YouTube)", type:"YouTube",link:"https://www.youtube.com/playlist?list=PLmd2GEKBxl35pzRVGWQ-uajFBjEpEo7LH"});
+await Material.create({subject:s8science._id, title:"Class 8 Science NCERT – All Chapters (YouTube)", type:"YouTube",link:"https://www.youtube.com/watch?v=Y4lHkLqwDYs"});
 await Material.create({subject:s8science._id, title:"NCERT Class 8 Science Textbook PDF",           type:"Link",    link:"https://ncert.nic.in/textbook.php?hesc1=0-18"});
-await Material.create({subject:s8english._id, title:"Class 8 English Honeydew – Chapter Videos",   type:"YouTube", link:"https://www.youtube.com/results?search_query=class+8+english+honeydew+ncert"});
+await Material.create({subject:s8english._id, title:"Class 8 English Honeydew – Chapter Videos",   type:"YouTube", link:"https://www.youtube.com/watch?v=aFQFB5a0E7Y"});
 await Material.create({subject:s8english._id, title:"BBC Learning English – Lower Intermediate",    type:"Link",    link:"https://www.bbc.co.uk/learningenglish/english/course/lower-intermediate"});
 
 // Class 9
@@ -187,12 +187,12 @@ const s9maths   = await Subject.create({name:"Class 9 Mathematics", code:"CLS9-M
 const s9science = await Subject.create({name:"Class 9 Science",     code:"CLS9-SCI",  description:"NCERT Class 9 Science: Matter, Atoms, Motion, Life Processes"});
 const s9sst     = await Subject.create({name:"Class 9 Social Studies", code:"CLS9-SST", description:"History, Geography, Economics & Civics for Class 9"});
 
-await Material.create({subject:s9maths._id,   title:"Class 9 Maths NCERT – Full Course (YouTube)", type:"YouTube", link:"https://www.youtube.com/playlist?list=PLCSTGzFtUMq15dVVnpUyuITrF5gV2Qa82"});
+await Material.create({subject:s9maths._id,   title:"Class 9 Maths NCERT – Full Course (YouTube)", type:"YouTube", link:"https://www.youtube.com/watch?v=xkg7370CPEs"});
 await Material.create({subject:s9maths._id,   title:"NCERT Class 9 Maths Textbook PDF",            type:"Link",    link:"https://ncert.nic.in/textbook.php?iemh1=0-15"});
 await Material.create({subject:s9maths._id,   title:"Vedantu – Class 9 Maths Solved Examples",    type:"Link",    link:"https://www.vedantu.com/ncert/class-9-maths"});
-await Material.create({subject:s9science._id, title:"Class 9 Science – All Chapters (YouTube)",   type:"YouTube", link:"https://www.youtube.com/playlist?list=PLmd2GEKBxl36X3U9CVbz5bSL2CptBlQlK"});
+await Material.create({subject:s9science._id, title:"Class 9 Science – All Chapters (YouTube)",   type:"YouTube", link:"https://www.youtube.com/watch?v=oufYoGjRrco"});
 await Material.create({subject:s9science._id, title:"NCERT Class 9 Science Textbook PDF",          type:"Link",    link:"https://ncert.nic.in/textbook.php?iesc1=0-15"});
-await Material.create({subject:s9sst._id,     title:"Class 9 SST – Complete Playlist (YouTube)",  type:"YouTube", link:"https://www.youtube.com/results?search_query=class+9+social+science+ncert"});
+await Material.create({subject:s9sst._id,     title:"Class 9 SST – Complete Course (YouTube)",   type:"YouTube", link:"https://www.youtube.com/watch?v=6GaKSL_HXGM"});
 await Material.create({subject:s9sst._id,     title:"NCERT Class 9 History – India & the World",  type:"Link",    link:"https://ncert.nic.in/textbook.php?iess2=0-5"});
 
 // Class 10
@@ -201,16 +201,16 @@ const s10science = await Subject.create({name:"Class 10 Science",        code:"C
 const s10sst     = await Subject.create({name:"Class 10 Social Studies",  code:"CLS10-SST",  description:"History, Geography, Economics & Civics for Class 10"});
 const s10eng     = await Subject.create({name:"Class 10 English",        code:"CLS10-ENG",  description:"First Flight & Footprints Without Feet – NCERT Class 10"});
 
-await Material.create({subject:s10maths._id,   title:"Class 10 Maths – Complete Course (YouTube)",  type:"YouTube", link:"https://www.youtube.com/playlist?list=PLCSTGzFtUMq21w0c3e4l1wU15NF9b5nJb"});
+await Material.create({subject:s10maths._id,   title:"Class 10 Maths – Complete Course (YouTube)",  type:"YouTube", link:"https://www.youtube.com/watch?v=Jq5SObMdnZ8"});
 await Material.create({subject:s10maths._id,   title:"NCERT Class 10 Maths Textbook PDF",           type:"Link",    link:"https://ncert.nic.in/textbook.php?jemh1=0-15"});
 await Material.create({subject:s10maths._id,   title:"CBSE Class 10 Previous Year Maths Papers",    type:"Link",    link:"https://www.cbse.gov.in/cbsenew/question-paper.html"});
 await Material.create({subject:s10maths._id,   title:"Toppr – Class 10 Maths Practice",             type:"Link",    link:"https://www.toppr.com/guides/maths/class-10/"});
-await Material.create({subject:s10science._id, title:"Class 10 Science – All Chapters (YouTube)",   type:"YouTube", link:"https://www.youtube.com/playlist?list=PLCSTGzFtUMq0jvJeW8hWXL3f8sxuegGUd"});
+await Material.create({subject:s10science._id, title:"Class 10 Science – All Chapters (YouTube)",   type:"YouTube", link:"https://www.youtube.com/watch?v=RnFqFbBqhDk"});
 await Material.create({subject:s10science._id, title:"NCERT Class 10 Science Textbook PDF",          type:"Link",    link:"https://ncert.nic.in/textbook.php?jesc1=0-16"});
 await Material.create({subject:s10science._id, title:"BYJU'S Class 10 Science Notes",               type:"Link",    link:"https://byjus.com/class-10-science/"});
-await Material.create({subject:s10sst._id,     title:"Class 10 SST – Full Playlist (YouTube)",      type:"YouTube", link:"https://www.youtube.com/results?search_query=class+10+social+science+ncert+full"});
+await Material.create({subject:s10sst._id,     title:"Class 10 SST – Full Course (YouTube)",        type:"YouTube", link:"https://www.youtube.com/watch?v=MdSFLjRKDzM"});
 await Material.create({subject:s10sst._id,     title:"NCERT Class 10 SST Textbooks",                type:"Link",    link:"https://ncert.nic.in/textbook.php?jess2=0-8"});
-await Material.create({subject:s10eng._id,     title:"Class 10 First Flight – All Chapters (YouTube)", type:"YouTube", link:"https://www.youtube.com/results?search_query=class+10+english+first+flight+ncert"});
+await Material.create({subject:s10eng._id,     title:"Class 10 First Flight – All Chapters (YouTube)", type:"YouTube", link:"https://www.youtube.com/watch?v=4nTBzHJA0_w"});
 await Material.create({subject:s10eng._id,     title:"NCERT Class 10 English Textbook PDF",         type:"Link",    link:"https://ncert.nic.in/textbook.php?jelo1=0-11"});
 
 // ═══════════════════════════════════════════

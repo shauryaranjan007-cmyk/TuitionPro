@@ -16,90 +16,235 @@ function ProtectedRoute({ children }: { children: any }) {
 
 function Layout({ children }: { children: any }) {
   const nav = useNavigate(); const u = user();
-  const [open, setOpen] = useState(true);
-  const logout = async () => { try { await api.post("/auth/logout") } finally { localStorage.removeItem("tp_user"); nav("/login") } };
+  const location = useLocation();
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" ? window.innerWidth < 992 : false);
+  const [open, setOpen] = useState(() => typeof window !== "undefined" ? window.innerWidth >= 992 : true);
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem("tp_dark") === "1");
+
+  useEffect(() => {
+    if (darkMode) {
+      document.body.classList.add("dark-mode");
+      localStorage.setItem("tp_dark", "1");
+    } else {
+      document.body.classList.remove("dark-mode");
+      localStorage.setItem("tp_dark", "0");
+    }
+  }, [darkMode]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 992;
+      setIsMobile(mobile);
+      if (!mobile) setOpen(true);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (isMobile) {
+      setOpen(false);
+    }
+  }, [location.pathname, isMobile]);
+
+  const closeSidebarOnMobile = () => {
+    if (isMobile) {
+      setOpen(false);
+    }
+  };
+
+  const logout = async () => { 
+    try { 
+      await api.post("/auth/logout"); 
+    } finally { 
+      localStorage.removeItem("tp_user"); 
+      nav("/login"); 
+    } 
+  };
 
   if (!u) {
     return <><nav className="navbar bg-white border-bottom"><div className="container"><Link className="navbar-brand text-primary fw-bold" to="/">TuitionPro ✦</Link></div></nav><main className="container py-5">{children}</main></>;
   }
 
+  return (
+    <div className="d-flex min-vh-100 position-relative" style={{ backgroundColor: "#f8fafc" }}>
+      <style>{`
+        .sidebar-link { color: #94a3b8; transition: all 0.2s ease; font-size: 0.9rem; text-decoration: none; display: block; }
+        .sidebar-link:hover { color: #f8fafc; background-color: rgba(255,255,255,0.08); }
+        .sidebar-link.active { background-color: #3b82f6 !important; color: #ffffff !important; font-weight: 600; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3); }
+        .sidebar-header { font-size: 0.68rem; letter-spacing: 1px; text-transform: uppercase; color: #64748b; font-weight: 700; margin-top: 1rem; margin-bottom: 0.35rem; padding-left: 0.75rem; }
+        .sidebar-scroll::-webkit-scrollbar { width: 4px; }
+        .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+        .sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+        .sidebar-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+      `}</style>
 
-  return <div className="d-flex min-vh-100" style={{ backgroundColor: "#f8fafc" }}>
-    <style>{`
-    .sidebar-link { color: #94a3b8; transition: all 0.2s ease; font-size: 0.95rem; }
-    .sidebar-link:hover { color: #f8fafc; background-color: rgba(255,255,255,0.08); }
-    .sidebar-link.active { background-color: #3b82f6 !important; color: #ffffff !important; font-weight: 600; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3); }
-    .sidebar-header { font-size: 0.7rem; letter-spacing: 1px; text-transform: uppercase; color: #64748b; font-weight: 700; margin-top: 1.5rem; margin-bottom: 0.5rem; padding-left: 1rem; }
-  `}</style>
-    <AnimatePresence>
-      {open && <motion.aside initial={{ width: 0, opacity: 0 }} animate={{ width: 260, opacity: 1 }} exit={{ width: 0, opacity: 0 }} className="d-flex flex-column shadow-lg sticky-top overflow-hidden text-nowrap" style={{ height: "100vh", backgroundColor: "#0f172a", zIndex: 1000 }}>
-        <div className="p-3 d-flex flex-column h-100">
-          <div className="d-flex justify-content-between align-items-center mb-4 mt-2 px-2">
-            <Link className="navbar-brand text-white fw-bold fs-4 d-flex align-items-center gap-2" to="/">
-              <div className="bg-primary rounded px-2 py-1 text-white shadow-sm" style={{ fontSize: "1.2rem" }}>T</div>
-              <span>TuitionPro</span>
-            </Link>
-            <button className="btn btn-sm text-white-50 border-0 fw-bold p-0 fs-5" onClick={() => setOpen(false)}>✕</button>
-          </div>
+      {/* Mobile Backdrop Overlay */}
+      <AnimatePresence>
+        {open && isMobile && (
+          <motion.div
+            key="mobile-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setOpen(false)}
+            style={{
+              position: "fixed",
+              inset: 0,
+              backgroundColor: "rgba(15, 23, 42, 0.65)",
+              backdropFilter: "blur(3px)",
+              WebkitBackdropFilter: "blur(3px)",
+              zIndex: 1040,
+            }}
+          />
+        )}
+      </AnimatePresence>
 
-          <div className="nav flex-column gap-1 flex-grow-1 overflow-auto pe-1" style={{ scrollbarWidth: "none" }}>
-            <div className="sidebar-header mt-1">Main Menu</div>
-            <NavLink className="nav-link sidebar-link rounded px-3 py-2" to="/">Dashboard</NavLink>
-            {u.role === "admin" && <NavLink className="nav-link sidebar-link rounded px-3 py-2" to="/students">Students</NavLink>}
-            {u.role === "admin" && <NavLink className="nav-link sidebar-link rounded px-3 py-2" to="/courses">Courses</NavLink>}
-            {u.role === "admin" && <NavLink className="nav-link sidebar-link rounded px-3 py-2" to="/batches">Batches</NavLink>}     <NavLink className="nav-link sidebar-link rounded px-3 py-2" to="/attendance">Attendance</NavLink>
-            <NavLink className="nav-link sidebar-link rounded px-3 py-2" to="/payments">Payments</NavLink>
-            {u.role === "admin" && <NavLink className="nav-link sidebar-link rounded px-3 py-2" to="/dues">Fee Dues</NavLink>}
+      {/* Sidebar Drawer */}
+      <AnimatePresence>
+        {(open || !isMobile) && (
+          <motion.aside
+            key="sidebar"
+            initial={isMobile ? { x: -300 } : false}
+            animate={isMobile ? { x: 0 } : { width: 270 }}
+            exit={isMobile ? { x: -300 } : { width: 0 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className={`d-flex flex-column shadow-lg ${isMobile ? "position-fixed top-0 start-0 bottom-0" : "sticky-top"} text-nowrap`}
+            style={{
+              height: "100vh",
+              width: 270,
+              minWidth: isMobile ? undefined : 270,
+              maxWidth: isMobile ? "85vw" : 270,
+              flexShrink: 0,
+              backgroundColor: "#0f172a",
+              zIndex: 1050,
+              overflow: "hidden"
+            }}
+          >
+            <div className="p-3 d-flex flex-column h-100" style={{ width: 270, maxWidth: isMobile ? "85vw" : 270 }}>
+              <div className="d-flex justify-content-between align-items-center mb-3 mt-1 px-2">
+                <Link className="navbar-brand text-white fw-bold fs-4 d-flex align-items-center gap-2" to="/" onClick={closeSidebarOnMobile}>
+                  <div className="bg-primary rounded px-2 py-1 text-white shadow-sm" style={{ fontSize: "1.2rem" }}>T</div>
+                  <span>TuitionPro</span>
+                </Link>
+                {isMobile && (
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary btn-sm text-white rounded-circle d-flex align-items-center justify-content-center p-0"
+                    style={{ width: 34, height: 34, fontSize: "1.1rem", borderColor: "rgba(255,255,255,0.2)", backgroundColor: "rgba(255,255,255,0.08)" }}
+                    onClick={() => setOpen(false)}
+                    aria-label="Close sidebar"
+                    title="Close sidebar"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
 
-            <div className="sidebar-header">Academics</div>
-            <NavLink className="nav-link sidebar-link rounded px-3 py-2" to="/subjects">Subjects</NavLink>
-            <NavLink className="nav-link sidebar-link rounded px-3 py-2" to="/tests">Tests</NavLink>
+              {/* Single vertical column navigation list - flex-nowrap prevents multi-column splitting */}
+              <div 
+                className="d-flex flex-column flex-nowrap gap-1 flex-grow-1 overflow-y-auto pe-1 sidebar-scroll" 
+                style={{ scrollbarWidth: "thin", minHeight: 0, overflowX: "hidden" }}
+              >
+                <div className="sidebar-header mt-1">Main Menu</div>
+                <NavLink className="sidebar-link rounded px-3 py-2" to="/" onClick={closeSidebarOnMobile}>Dashboard</NavLink>
+                {u.role === "admin" && <NavLink className="sidebar-link rounded px-3 py-2" to="/students" onClick={closeSidebarOnMobile}>Students</NavLink>}
+                {u.role === "admin" && <NavLink className="sidebar-link rounded px-3 py-2" to="/courses" onClick={closeSidebarOnMobile}>Courses</NavLink>}
+                {u.role === "admin" && <NavLink className="sidebar-link rounded px-3 py-2" to="/batches" onClick={closeSidebarOnMobile}>Batches</NavLink>}
+                <NavLink className="sidebar-link rounded px-3 py-2" to="/attendance" onClick={closeSidebarOnMobile}>Attendance</NavLink>
+                <NavLink className="sidebar-link rounded px-3 py-2" to="/payments" onClick={closeSidebarOnMobile}>Payments</NavLink>
+                {u.role === "admin" && <NavLink className="sidebar-link rounded px-3 py-2" to="/dues" onClick={closeSidebarOnMobile}>Fee Dues</NavLink>}
 
-            <div className="sidebar-header">System</div>
-            <NavLink className="nav-link sidebar-link rounded px-3 py-2" to="/settings">Profile & Settings</NavLink>
-            <NavLink className="nav-link sidebar-link rounded px-3 py-2" to="/ai">AI Tools</NavLink>
-            {u.role === "admin" && <NavLink className="nav-link sidebar-link rounded px-3 py-2" to="/gmail">Mail Center</NavLink>}
-            <NavLink className="nav-link sidebar-link rounded px-3 py-2 fw-bold text-info" to="/experiments">Lab Experiments</NavLink>
-          </div>
+                <div className="sidebar-header">Academics</div>
+                <NavLink className="sidebar-link rounded px-3 py-2" to="/subjects" onClick={closeSidebarOnMobile}>Subjects</NavLink>
+                <NavLink className="sidebar-link rounded px-3 py-2" to="/tests" onClick={closeSidebarOnMobile}>Tests</NavLink>
 
-          <div className="mt-auto pt-4">
-            <div className="d-flex align-items-center mb-3 px-2 bg-dark rounded p-2" style={{ backgroundColor: "rgba(255,255,255,0.05)" }}>
-              <div className="rounded bg-primary text-white d-flex align-items-center justify-content-center fw-bold me-2 shadow-sm" style={{ width: 36, height: 36, minWidth: 36 }}>{u.name[0]}</div>
-              <div className="overflow-hidden text-white w-100">
-                <div className="small fw-bold text-truncate">{u.name}</div>
-                <div className="text-white-50" style={{ fontSize: "11px", textTransform: "uppercase" }}>{u.role}</div>
+                <div className="sidebar-header">System</div>
+                <NavLink className="sidebar-link rounded px-3 py-2" to="/settings" onClick={closeSidebarOnMobile}>Profile & Settings</NavLink>
+                <NavLink className="sidebar-link rounded px-3 py-2" to="/ai" onClick={closeSidebarOnMobile}>AI Tools</NavLink>
+                {u.role === "admin" && <NavLink className="sidebar-link rounded px-3 py-2" to="/gmail" onClick={closeSidebarOnMobile}>Mail Center</NavLink>}
+                <NavLink className="sidebar-link rounded px-3 py-2 fw-bold text-info" to="/experiments" onClick={closeSidebarOnMobile}>Lab Experiments</NavLink>
+              </div>
+
+              <div className="mt-auto pt-3">
+                <div className="d-flex align-items-center mb-2 px-2 bg-dark rounded p-2" style={{ backgroundColor: "rgba(255,255,255,0.05)" }}>
+                  <div className="rounded bg-primary text-white d-flex align-items-center justify-content-center fw-bold me-2 shadow-sm" style={{ width: 34, height: 34, minWidth: 34, fontSize: "0.9rem" }}>{u.name[0]}</div>
+                  <div className="overflow-hidden text-white w-100">
+                    <div className="small fw-bold text-truncate" style={{ fontSize: "0.85rem" }}>{u.name}</div>
+                    <div className="text-white-50" style={{ fontSize: "10px", textTransform: "uppercase" }}>{u.role}</div>
+                  </div>
+                </div>
+                <button className="btn btn-danger btn-sm w-100 fw-bold shadow-sm py-1.5" onClick={logout}>Logout</button>
               </div>
             </div>
-            <button className="btn btn-danger w-100 fw-bold shadow-sm" onClick={logout}>Logout</button>
-          </div>
-        </div>
-      </motion.aside>}
-    </AnimatePresence>
+          </motion.aside>
+        )}
+      </AnimatePresence>
 
-    <div className="flex-grow-1 d-flex flex-column" style={{ minWidth: 0 }}>
-      <header className="bg-white border-bottom px-4 py-3 d-flex align-items-center justify-content-between sticky-top shadow-sm" style={{ zIndex: 900 }}>
-        <div className="d-flex align-items-center gap-3">
-          {!open && <button className="btn btn-light shadow-sm border d-flex align-items-center justify-content-center p-2 rounded" onClick={() => setOpen(true)}>☰</button>}
-          <div className="input-group d-none d-md-flex shadow-sm rounded" style={{ width: "300px" }}>
-            <span className="input-group-text bg-light border-end-0 text-muted border-light-subtle">🔍</span>
-            <input type="text" className="form-control bg-light border-start-0 ps-0 border-light-subtle" placeholder="Search students, payments..." />
+      {/* Main Content Area */}
+      <div className="flex-grow-1 d-flex flex-column" style={{ minWidth: 0 }}>
+        <header className="bg-white border-bottom px-3 px-md-4 py-3 d-flex align-items-center justify-content-between sticky-top shadow-sm" style={{ zIndex: 900 }}>
+          <div className="d-flex align-items-center gap-2 gap-md-3">
+            {isMobile && (
+              <button
+                type="button"
+                className="btn btn-light shadow-sm border d-flex align-items-center justify-content-center rounded p-2"
+                style={{ width: 38, height: 38 }}
+                onClick={() => setOpen((prev) => !prev)}
+                aria-label="Toggle navigation menu"
+                title="Toggle menu"
+              >
+                <span style={{ fontSize: "1.2rem", lineHeight: 1 }}>☰</span>
+              </button>
+            )}
+            <div className="input-group d-none d-md-flex shadow-sm rounded" style={{ width: "300px" }}>
+              <span className="input-group-text bg-light border-end-0 text-muted border-light-subtle">🔍</span>
+              <input type="text" className="form-control bg-light border-start-0 ps-0 border-light-subtle" placeholder="Search students, payments..." />
+            </div>
           </div>
-        </div>
-        <div className="d-flex align-items-center gap-3">
-          <button className="btn btn-light position-relative p-2 rounded-circle d-flex align-items-center justify-content-center border-0 bg-light" style={{ width: 40, height: 40 }}>
-            🔔<span className="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"><span className="visually-hidden">New alerts</span></span>
-          </button>
-          <div className="border-start ps-3 d-flex align-items-center gap-2">
-            <span className="small fw-bold d-none d-md-inline text-secondary">{u.name}</span>
-            <div className="rounded bg-primary text-white d-flex align-items-center justify-content-center fw-bold shadow-sm" style={{ width: 34, height: 34 }}>{u.name[0]}</div>
+          <div className="d-flex align-items-center gap-2 gap-md-3">
+            <button className="btn btn-light position-relative p-2 rounded-circle d-flex align-items-center justify-content-center border-0 bg-light" style={{ width: 40, height: 40 }}>
+              🔔<span className="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"><span className="visually-hidden">New alerts</span></span>
+            </button>
+
+            {/* Dark / Light mode toggle */}
+            <button
+              type="button"
+              className="dark-toggle btn btn-light border shadow-sm"
+              onClick={() => setDarkMode(d => !d)}
+              title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              aria-label="Toggle dark mode"
+              style={{
+                backgroundColor: darkMode ? "#21262d" : "#f1f5f9",
+                borderColor: darkMode ? "#30363d" : "#e2e8f0",
+                transition: "background 0.35s, border-color 0.35s",
+              }}
+            >
+              <motion.span
+                key={darkMode ? "moon" : "sun"}
+                className="toggle-icon"
+                initial={{ rotate: -90, opacity: 0, scale: 0.6 }}
+                animate={{ rotate: 0, opacity: 1, scale: 1 }}
+                exit={{ rotate: 90, opacity: 0, scale: 0.6 }}
+                transition={{ duration: 0.3 }}
+              >
+                {darkMode ? "🌙" : "☀️"}
+              </motion.span>
+            </button>
+
+            <div className="border-start ps-2 ps-md-3 d-flex align-items-center gap-2">
+              <span className="small fw-bold d-none d-md-inline text-secondary">{u.name}</span>
+              <div className="rounded bg-primary text-white d-flex align-items-center justify-content-center fw-bold shadow-sm" style={{ width: 34, height: 34 }}>{u.name[0]}</div>
+            </div>
           </div>
-        </div>
-      </header>
-      <main className="p-4 p-md-5 flex-grow-1 overflow-auto">
-        {children}
-      </main>
+        </header>
+        <main className="p-3 p-md-5 flex-grow-1 overflow-auto">
+          {children}
+        </main>
+      </div>
     </div>
-  </div>;
+  );
 }
 
 function Login() {
