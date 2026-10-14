@@ -103,18 +103,18 @@ function Layout({ children }: { children: any }) {
 
       {/* Sidebar Drawer */}
       <AnimatePresence>
-        {(open || !isMobile) && (
+        {open && (
           <motion.aside
             key="sidebar"
-            initial={isMobile ? { x: -300 } : false}
-            animate={isMobile ? { x: 0 } : { width: 270 }}
-            exit={isMobile ? { x: -300 } : { width: 0 }}
+            initial={{ x: -280 }}
+            animate={{ x: 0 }}
+            exit={{ x: -280 }}
             transition={{ duration: 0.25, ease: "easeOut" }}
             className={`d-flex flex-column shadow-lg ${isMobile ? "position-fixed top-0 start-0 bottom-0" : "sticky-top"} text-nowrap`}
             style={{
               height: "100vh",
               width: 270,
-              minWidth: isMobile ? undefined : 270,
+              minWidth: 270,
               maxWidth: isMobile ? "85vw" : 270,
               flexShrink: 0,
               backgroundColor: "#0f172a",
@@ -128,18 +128,18 @@ function Layout({ children }: { children: any }) {
                   <div className="bg-primary rounded px-2 py-1 text-white shadow-sm" style={{ fontSize: "1.2rem" }}>T</div>
                   <span>TuitionPro</span>
                 </Link>
-                {isMobile && (
-                  <button
-                    type="button"
-                    className="btn btn-outline-secondary btn-sm text-white rounded-circle d-flex align-items-center justify-content-center p-0"
-                    style={{ width: 34, height: 34, fontSize: "1.1rem", borderColor: "rgba(255,255,255,0.2)", backgroundColor: "rgba(255,255,255,0.08)" }}
-                    onClick={() => setOpen(false)}
-                    aria-label="Close sidebar"
-                    title="Close sidebar"
-                  >
-                    ✕
-                  </button>
-                )}
+                <button
+                  type="button"
+                  className="btn btn-sm text-white-50 d-flex align-items-center justify-content-center rounded p-0"
+                  style={{ width: 32, height: 32, fontSize: "1rem", border: "none", backgroundColor: "rgba(255,255,255,0.08)", transition: "background 0.2s" }}
+                  onClick={() => setOpen(false)}
+                  aria-label="Close sidebar"
+                  title="Close sidebar"
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.18)")}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.08)")}
+                >
+                  ✕
+                </button>
               </div>
 
               {/* Single vertical column navigation list - flex-nowrap prevents multi-column splitting */}
@@ -186,14 +186,15 @@ function Layout({ children }: { children: any }) {
       <div className="flex-grow-1 d-flex flex-column" style={{ minWidth: 0 }}>
         <header className="bg-white border-bottom px-3 px-md-4 py-3 d-flex align-items-center justify-content-between sticky-top shadow-sm" style={{ zIndex: 900 }}>
           <div className="d-flex align-items-center gap-2 gap-md-3">
-            {isMobile && (
+            {/* Hamburger toggle — shown on mobile always, on desktop when sidebar is closed */}
+            {(isMobile || !open) && (
               <button
                 type="button"
                 className="btn btn-light shadow-sm border d-flex align-items-center justify-content-center rounded p-2"
                 style={{ width: 38, height: 38 }}
                 onClick={() => setOpen((prev) => !prev)}
                 aria-label="Toggle navigation menu"
-                title="Toggle menu"
+                title={open ? "Close menu" : "Open menu"}
               >
                 <span style={{ fontSize: "1.2rem", lineHeight: 1 }}>☰</span>
               </button>
